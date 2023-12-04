@@ -9,10 +9,19 @@
 
 #define MAX_INPUT_SIZE 1024
 #define MAX_ARGS 103
+
+int is_interactive(int argc)
+{
+	return (argc == 1 && isatty(STDIN_FILENO));
+}
+
 void print_prompt()
 {
+	if (is_interactive(1))
+	{
 	printf("$ ");
 	fflush(stdout);
+	}
 
 }
 
@@ -64,7 +73,10 @@ int main(int argc, char *argv[]) {
 
 
         while (fgets(input, MAX_INPUT_SIZE, file)) {
-           print_prompt();
+           if (is_interactive(argc))
+	   {
+		print_prompt();
+	   }
 
 	       	input[strcspn(input, "\n")] = '\0'; /* Remove newline character */
 	    
