@@ -25,6 +25,38 @@ void print_prompt()
 
 }
 
+void execute_command(char *args[], char *prog_name) 
+{
+	static int error_count = 0;
+	pid_t pid = fork();
+
+	if (pid == -1) 
+	{
+		perror(prog_name);
+		exit(EXIT_FAILURE);
+	}
+	else if (pid == 0)
+	{ /* Child process */
+		if (execve(args[0], args, NULL) == -1)
+			_exit(EXIT_FAILURE);
+	}
+       	else 
+	{/* Parent process */
+        int status;
+        if (waitpid(pid, &status, 0) == -1) 
+	{
+		perror(prog_name);
+		exit(EXIT_FAILURE);
+        }
+
+	if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
+	{
+		fprintf(stderr, "%s: %d: %s: command not found\n", 
+		prog_name, ++error_count, args[0]);
+	}
+    }
+}
+
 void execute_command(char *args[], char *prog_name);
 
 int find_and_exec_cmd(char *command, char *prog_name, char *args[])
@@ -60,37 +92,6 @@ int find_and_exec_cmd(char *command, char *prog_name, char *args[])
 }
 
 
-void execute_command(char *args[], char *prog_name) 
-{
-	static int error_count = 0;
-	pid_t pid = fork();
-
-	if (pid == -1) 
-	{
-		perror(prog_name);
-		exit(EXIT_FAILURE);
-	}
-	else if (pid == 0)
-	{ /* Child process */
-		if (execve(args[0], args, NULL) == -1)
-			_exit(EXIT_FAILURE);
-	}
-       	else 
-	{/* Parent process */
-        int status;
-        if (waitpid(pid, &status, 0) == -1) 
-	{
-		perror(prog_name);
-		exit(EXIT_FAILURE);
-        }
-
-	if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
-	{
-		fprintf(stderr, "%s: %d: %s: command not found\n", 
-		prog_name, ++error_count, args[0]);
-	}
-    }
-}
 
 int main(int argc, char *argv[])
 {
