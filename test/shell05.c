@@ -25,6 +25,41 @@ void print_prompt()
 
 }
 
+void execute_command(char *args[], char *prog_name);
+
+int find_and_exec_cmd(char *command, char *prog_name, char *args[])
+{/*  Check if the command is in the current directory */
+	if (execve(command, args, NULL) == -1)
+	{/* If execve fails, try to find the command in directories specified by PATH */
+		char *path = getenv("PATH");
+		char *path_copy = strdup(path);
+		char *dir = strtok(path_copy, ":");
+
+		while (dir != NULL)
+		{
+			char command_path[MAX_INPUT_SIZE];
+			snprintf(command_path, sizeof(command_path), "%s/%s", dir, command);
+
+			if (access(command_path, X_OK) == 0)
+			{
+                /* Command found in the current directory in PATH, execute it */
+				execute_command(args, prog_name);
+				free(path_copy);
+				return 1;
+			}
+			dir = strtok(NULL, ":");
+		}
+
+		/* If the loop completes, the command was not found in PATH */
+		free(path_copy);
+		return 0;
+	}
+
+	/* execve succeeded, and we don't reach this point */
+	return 1;
+}
+
+
 void execute_command(char *args[], char *prog_name) 
 {
 	static int error_count = 0;
@@ -39,7 +74,6 @@ void execute_command(char *args[], char *prog_name)
 	{ /* Child process */
 		if (execve(args[0], args, NULL) == -1)
 			_exit(EXIT_FAILURE);
-			
 	}
        	else 
 	{/* Parent process */

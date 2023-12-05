@@ -25,10 +25,16 @@ void print_prompt()
 
 }
 
+
 void execute_command(char *args[], char *prog_name) 
 {
 	static int error_count = 0;
 	pid_t pid = fork();
+	char *path = getenv("PATH");
+	char *path_cp = strup(path);
+	char *dir = strtoken(path_copy, ";");
+	char command_path:
+		
 
 	if (pid == -1) 
 	{
@@ -38,8 +44,23 @@ void execute_command(char *args[], char *prog_name)
 	else if (pid == 0)
 	{ /* Child process */
 		if (execve(args[0], args, NULL) == -1)
-			_exit(EXIT_FAILURE);
+		{
+			while (dir != NULL)
+			{
+				command_path[MAX_INPUT_SIZE];
+				snprintf(command_path, sixeof(command_path),"%s/%s", dir, args[0]);
+				if (access(command_path, X_OK) == 0)
+				{
+					execve(command_path, args, NULL);
+					perror(prog_name);
+					 _exit(EXIT_FAILURE);
+				}
+			dir = strtok(NULL, ":");
+			}
+			fprintf(stderr, "%s: %d: %s: command not found\n", prog_name, ++error_count, args[0]);
+			_exit(EXIT_FAILURE):
 			
+		}
 	}
        	else 
 	{/* Parent process */
