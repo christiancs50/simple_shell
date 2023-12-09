@@ -16,11 +16,23 @@ int is_interactive(int argc)
 	return (argc == 1 && isatty(STDIN_FILENO));
 }
 
-void print_prompt()
+
+/**
+ * print - function that prints string given
+ * @message: message to be printed
+ *
+ */
+
+void print(const char *message)
+{
+	write(STDOUT_FILENO, message, strlen(message));
+}
+
+void print_prompt(void)
 {
 	if (is_interactive(1))
 	{
-		printf("$ ");
+		print("$ ");
 		fflush(stdout);
 	}
 
@@ -72,34 +84,37 @@ char *get_location(const char *command)
 		}
 
 		path_token = strtok(NULL, ":");
-	}
 
+
+	}
+	/* Check if the command itself is a file path that exists */
+	if (stat(command, &buffer) == 0)
+	{
+		free(path_copy);
+		return strdup(command);
+	}
+	
 	/* Free allocated memory before returning NULL */
 	free(file_path);
 	free(path_copy);
 
-	/* Check if the command itself is a file path that exists */
-	if (stat(command, &buffer) == 0)
-	{
-		return strdup(command);
-	}
-
 	return NULL;
-}
 
+}
 void execute_command(char *args[], char *prog_name) 
 {
 	static int error_count = 0;
-	char* command_path = get_location(args[0]);
+	char *command_path = get_location(args[0]);
 	pid_t pid = fork();
 
-	if (command_path == NULL)
+/*	if (command_path == NULL)
 	{
 		fprintf(stderr, "%s: %d: %s: not found\n",
 			prog_name, ++error_count, args[0]);
+		free(command_path);
 		return;
 	}
-
+*/
 
 	if (pid == -1) 
 	{
@@ -123,7 +138,7 @@ void execute_command(char *args[], char *prog_name)
 	if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
 	{
 		fprintf(stderr, "%s: %d: %s: not found\n", 
-		prog_name, ++error_count, args[0]);
+		prog_name, ++error_count, args[0]); 
 	}
     }
 	free(command_path);
@@ -148,78 +163,83 @@ int tokenize_input(char *input, char *args[])
 	return (i);
 }
 
-int main(int argc, char *argv[])
+void non_interactive_mode(char *filename, char *shell_name)
+{
+	FILE *file = fopen(filename, "r");
+	char input[MAX_INPUT_SIZE];
+	char *args[MAX_ARGS];
+	int i;
+
+	if (!file)
+	{
+		perror(shell_name);
+		exit(EXIT_FAILURE);
+	}
+
+
+	while (fgets(input, MAX_INPUT_SIZE, file))
+	{
+		tokenize_input(input, args);
+	
+		if (args[0] != NULL)
+		{
+		      execute_command(args, shell_name);
+		}
+
+		/* Free allocated memory */
+		for (i = 0; i < MAX_ARGS - 1; i++)
+		{
+			free(args[i]);
+		}
+	}
+	fclose(file);
+}
+
+void run_interactive_mode(char *shell_name)
 {
 	char input[MAX_INPUT_SIZE];
 	char *args[MAX_ARGS];
-	int i, j;
+        int i, j;
+	while (1)
+	{
+		print_prompt();
 
-	if (argc != 1)
-	{/* Non-interactive mode */
-		FILE *file = fopen(argv[1], "r");
-		if (!file)
+		if (fgets(input, MAX_INPUT_SIZE, stdin) == NULL)
 		{
-			perror(argv[0]);
-			exit(EXIT_FAILURE);
+			print("\n");
+			break; /* End of input (Ctrl+D) */
 		}
-
-
-		while (fgets(input, MAX_INPUT_SIZE, file))
-		{
-			if (is_interactive(argc))
-			{
-				print_prompt();
-			}
-			input[strcspn(input, "\n")] = '\0'; /* Remove newline character */
-				tokenize_input(input, args);
-				if (args[0] != NULL)
-				{
-					execute_command(args, argv[0]);
-				}	
-
-			/* Free allocated memory */
-			for (i = 0; i < MAX_ARGS - 1; i++)
-			{
-				free(args[i]);
-			}
-		}
-		fclose(file);
-	}
-	else
-	{/* Interactive mode */
-		while (1)
-		{
-			print_prompt();
-
-			if (fgets(input, MAX_INPUT_SIZE, stdin) == NULL)
-			{
-				printf("\n");
-				break; /* End of input (Ctrl+D) */
-			}
 
 			input[strcspn(input, "\n")] = '\0'; /* Remove newline character */
 
-			if (strcmp(input, "exit") == 0)
-			{
-					break;
-			}
-			
-
-			tokenize_input(input, args);
-
-			if(args[0] != NULL)
-			{
-				execute_command(args, argv[0]);
-			}
-
-			/* Free allocated memory */
-			for (j = 0; j < i; j++)
-                        {
-                                free(args[j]);
-                        }
-			i =0;
+		if (strcmp(input, "exit") == 0)
+		{
+			break;
 		}
+		
+		tokenize_input(input, args);
+		if (args[0] != NULL)
+		{
+			execute_command(args, shell_name);
+		}
+		/* Free allocated memory */
+		for (j = 0; j < i; j++)
+		{
+			free(args[j]);
+		}
+		i =0;
 	}
+}
 
-    return 0;
+int main(int argc, char *argv[])
+{
+	if (argc == 1)
+	{
+		run_interactive_mode(argv[0]);
+	}
+	else if (argc == 2)
+	{
+		non_interactive_mode(argv[1], argv[2]);
+	}
+	return (0);
 }

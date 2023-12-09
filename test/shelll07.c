@@ -16,11 +16,23 @@ int is_interactive(int argc)
 	return (argc == 1 && isatty(STDIN_FILENO));
 }
 
-void print_prompt()
+
+/**
+ * print - function that prints string given
+ * @message: message to be printed
+ *
+ */
+
+void print(const char *message)
+{
+	write(STDOUT_FILENO, message, strlen(message));
+}
+
+void print_prompt(void)
 {
 	if (is_interactive(1))
 	{
-		printf("$ ");
+		print("$ ");
 		fflush(stdout);
 	}
 
@@ -72,31 +84,34 @@ char *get_location(const char *command)
 		}
 
 		path_token = strtok(NULL, ":");
-	}
 
+
+	}
+	/* Check if the command itself is a file path that exists */
+	if (stat(command, &buffer) == 0)
+	{
+		free(path_copy);
+		return strdup(command);
+	}
+	
 	/* Free allocated memory before returning NULL */
 	free(file_path);
 	free(path_copy);
 
-	/* Check if the command itself is a file path that exists */
-	if (stat(command, &buffer) == 0)
-	{
-		return strdup(command);
-	}
-
 	return NULL;
-}
 
+}
 void execute_command(char *args[], char *prog_name) 
 {
 	static int error_count = 0;
-	char* command_path = get_location(args[0]);
+	char *command_path = get_location(args[0]);
 	pid_t pid = fork();
 
 	if (command_path == NULL)
 	{
 		fprintf(stderr, "%s: %d: %s: not found\n",
 			prog_name, ++error_count, args[0]);
+		free(command_path);
 		return;
 	}
 
@@ -171,11 +186,11 @@ int main(int argc, char *argv[])
 				print_prompt();
 			}
 			input[strcspn(input, "\n")] = '\0'; /* Remove newline character */
-				tokenize_input(input, args);
-				if (args[0] != NULL)
-				{
-					execute_command(args, argv[0]);
-				}	
+			tokenize_input(input, args);
+			if (args[0] != NULL)
+			{
+			      execute_command(args, argv[0]);
+			}
 
 			/* Free allocated memory */
 			for (i = 0; i < MAX_ARGS - 1; i++)
@@ -201,16 +216,16 @@ int main(int argc, char *argv[])
 
 			if (strcmp(input, "exit") == 0)
 			{
-					break;
+				break;
 			}
 			
 
 			tokenize_input(input, args);
 
-			if(args[0] != NULL)
-			{
-				execute_command(args, argv[0]);
-			}
+                        if (args[0] != NULL)
+                        {
+                              execute_command(args, argv[0]);
+                        }
 
 			/* Free allocated memory */
 			for (j = 0; j < i; j++)
@@ -221,5 +236,5 @@ int main(int argc, char *argv[])
 		}
 	}
 
-    return 0;
+    return (0);
 }
