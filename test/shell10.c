@@ -10,10 +10,57 @@
 
 #define MAX_INPUT_SIZE 1024
 #define MAX_ARGS 103
+/*
+ * info structure members
+ */
+typedef struct {
+    char **tokens;
+    char **argv;
+    int lineno;
+    int status;
+    FILE *file;
+    int fileno;
+} info_t;
 
-int is_interactive(int argc)
+info_t* initialize_info() {
+    info_t* my_info = malloc(sizeof(info_t));
+    if (my_info == NULL) {
+        perror("malloc");
+        exit(1);  /*  Exit the program with an error code */
+    }
+
+	my_info->lineno = 0;
+	my_info->status = 0;
+	my_info->file = NULL;
+	my_info->fileno = 0;
+
+	return my_info;
+}
+
+void cleanup_info(info_t* my_info) {
+    /* (perform any additional cleanup if needed)*/
+    free(my_info);
+}
+
+void exit_(info_t* my_info) {
+    /* ... (exit logic using my_info) */
+    cleanup_info(my_info);
+    exit(my_info->status);
+}
+
+/**
+ * sigint - reprompts
+ * @signal: signal passed
+ */
+void sigint(int signal __attribute__((unused)))
 {
-	return (argc == 1 && isatty(STDIN_FILENO));
+	fflush(STDIN_FILENO);
+	write(STDERR_FILENO, "\n$ ", 3);
+}
+
+int is_interactive(int fd)
+{
+	return (isatty(fd));
 }
 
 
@@ -34,8 +81,11 @@ void print(const char *message)
  */
 void print_prompt(void)
 {
+	if(is_interactive(STDIN_FILENO))
+	{
 		print("$ ");
 		fflush(stdout);
+	}
 
 }
 
@@ -181,60 +231,67 @@ int tokenize_input(char *input, char *args[])
 	return (i);
 }
 
+/*void exit_(info_t *info) 
+{
+	char **args = info->tokens + 1;
+
+	if (*args) 
+	{
+		if (atoi(*args) != 0) 
+		{
+			info->status = atoi(*args);
+		}
+		else
+		{
+			fprintf(stderr, "Invalid argument for exit: %s\n", *args);
+			info->status = 2;
+		}
+	}
+
+	if (info->file) 
+	{
+		fclose(info->file);
+	}
+
+	 dditional cleanup if needed 
+
+	exit(info->status);
+}*/
+
+
+/**
+  * main - Main entry point for our program
+  * @argc: Argument count to the main
+  * @argv: Pointer to array of argument values
+  * Return: O Always success
+  */
 int main(int argc, char *argv[])
 {
+	info_t *my_info;
+
 	char input[MAX_INPUT_SIZE];
 	char *args[MAX_ARGS];
 	int i, j;
-
-	if (argc != 1)
-	{/* Non-interactive mode */
-		FILE *file = fopen(argv[1], "r");
-		if (!file)
-		{
-			perror(argv[0]);
-			exit(EXIT_FAILURE);
-		}
+	(void)argc;
 
 
-		while (fgets(input, MAX_INPUT_SIZE, file))
-		{
-		/*	if (is_interactive(argc))
+	my_info = initialize_info();
+
+        signal(SIGINT, sigint);
+	while(1)
+	{
+		print_prompt();
+
+		if (fgets(input, MAX_INPUT_SIZE, stdin) == NULL)
 			{
-				print_prompt();
-			}
-		input[strcspn(input, "\n")] = '\0';
-		*/
-			tokenize_input(input, args);
-			if (args[0] != NULL)
-			{
-			      execute_command(args, argv[0]);
-			}
-				/* Free allocated memory */
-			for (i = 0; i < MAX_ARGS - 1; i++)
-			{
-				free(args[i]);
-			}
-		}
-		fclose(file);
-	}
-	else
-	{/* Interactive mode */
-		while (1)
-		{
-			print_prompt();
-			
-			if (fgets(input, MAX_INPUT_SIZE, stdin) == NULL)
-			{
-				print("\n");
 				break; /* End of input (Ctrl+D) */
 			}
 
-			input[strcspn(input, "\n")] = '\0'; /* Remove newline character */
+			input[strcspn(input, "\n")] = '\0'; /*  Remove newline character */
 
 			if (strcmp(input, "exit") == 0)
 			{
-				break;
+				exit_(my_info);
 			}
 			
 
@@ -251,8 +308,8 @@ int main(int argc, char *argv[])
                                 free(args[j]);
                         }
 			i =0;
-		}
 	}
+	 cleanup_info(my_info);
 
     return (0);
 }
