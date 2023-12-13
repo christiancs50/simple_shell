@@ -1,5 +1,5 @@
 #include "shell.h"
-char *allocate_command_path(const char *path, const char *comm    and);
+char *allocate_command_path(const char *path, const char *command);
 /**
  * allocate_command_path - function that returns the path of a command
  * @command: name of the command
