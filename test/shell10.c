@@ -56,9 +56,9 @@ void cleanup_info(info_t* my_info)
 
 
 void exit_(info_t* my_info) {
-    /* ... (exit logic using my_info) */
-    cleanup_info(my_info);
-    exit(my_info->status);
+	/* ... (exit logic using my_info) */
+	cleanup_info(my_info);
+	exit(my_info->status);
 }
 
 /**

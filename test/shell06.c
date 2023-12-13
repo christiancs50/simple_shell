@@ -79,26 +79,22 @@ char *get_location(const char *command)
 	free(path_copy);
 
 	/* Check if the command itself is a file path that exists */
-	if (stat(command, &buffer) == 0)
-	{
-		return strdup(command);
-	}
 
 	return NULL;
 }
 
 void execute_command(char *args[], char *prog_name) 
 {
-	static int error_count = 0;
+	static int command_count = 0;
 	char* command_path = get_location(args[0]);
 	pid_t pid = fork();
 
-	if (command_path == NULL)
+/*	if (command_path == NULL)
 	{
 		fprintf(stderr, "%s: %d: %s: not found\n",
-			prog_name, ++error_count, args[0]);
+			prog_name, command_count, args[0]);
 		return;
-	}
+	}*/
 
 
 	if (pid == -1) 
@@ -119,11 +115,11 @@ void execute_command(char *args[], char *prog_name)
 		perror(prog_name);
 		exit(EXIT_FAILURE);
         }
-
+	++command_count;
 	if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
 	{
 		fprintf(stderr, "%s: %d: %s: not found\n", 
-		prog_name, ++error_count, args[0]);
+		prog_name, command_count, args[0]);
 	}
     }
 	free(command_path);
@@ -140,7 +136,7 @@ int tokenize_input(char *input, char *args[])
 
 	while (token != NULL && i < MAX_ARGS - 1)
 	{
-		args[i++] = token;
+		args[i++] = strdup(token);
 		token = strtok(NULL, " ");
 	}
 
@@ -171,8 +167,8 @@ int main(int argc, char *argv[])
 				print_prompt();
 			}
 			input[strcspn(input, "\n")] = '\0'; /* Remove newline character */
-				tokenize_input(input, args);
-				if (args[0] != NULL)
+				i = tokenize_input(input, args);
+				if (1 > 0 && args[0] != NULL)
 				{
 					execute_command(args, argv[0]);
 				}	
@@ -205,7 +201,7 @@ int main(int argc, char *argv[])
 			}
 			
 
-			tokenize_input(input, args);
+			i = tokenize_input(input, args);
 
 			if(args[0] != NULL)
 			{
@@ -213,7 +209,7 @@ int main(int argc, char *argv[])
 			}
 
 			/* Free allocated memory */
-			for (j = 0; j < i; j++)
+			for (i = 0; i < MAX_ARGS - 1; i++)
                         {
                                 free(args[j]);
                         }
