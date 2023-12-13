@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <signal.h>
+#include <malloc.h>
 
 #define MAX_INPUT_SIZE 1024
 #define MAX_ARGS 103
@@ -31,7 +33,7 @@ typedef struct {
     env_t *env;
 } info_t;
 
-
+info_t *my_info;
 
 info_t* initialize_info() {
     info_t* my_info = malloc(sizeof(info_t));
@@ -46,20 +48,27 @@ info_t* initialize_info() {
 	my_info->fileno = 0;
 	my_info->env = NULL;
 
-	return (my_info);
+
+	return my_info;
 }
 
-void cleanup_info(info_t* my_info)
-{
-	free(my_info);
+void cleanup_info(info_t* my_info) {
+    /* (perform any additional cleanup if needed)*/
+    free(my_info);
 }
-
 
 void exit_(info_t* my_info) {
     /* ... (exit logic using my_info) */
     cleanup_info(my_info);
     exit(my_info->status);
 }
+
+
+int is_interactive(int fd)
+{
+	return (isatty(fd));
+}
+
 
 /**
  * print - function that prints string given
@@ -72,21 +81,27 @@ void print(const char *message)
 	write(STDOUT_FILENO, message, strlen(message));
 }
 
+void cleanup_nd_exit(info_t* my_info);
+
+volatile sig_atomic_t sigint_received = 0;
+void sigint_handler(int signal __attribute__((unused))) {
+    sigint_received = 1;
+}
 /**
  * sigint - reprompts
  * @signal: signal passed
  */
+
 void sigint(int signal __attribute__((unused)))
 {
-	print("\n");
-	exit(EXIT_SUCCESS);
+        fflush(STDIN_FILENO);
+	sigint_received = 1;
 }
 
-int is_interactive(int fd)
-{
-	return (isatty(fd));
+void cleanup_nd_exit(info_t* my_info) {
+    cleanup_info(my_info);
+    exit(EXIT_SUCCESS);
 }
-
 
 
 /**
@@ -102,7 +117,6 @@ void print_prompt(void)
 	}
 
 }
-
 
 
 /**
@@ -152,17 +166,24 @@ char *get_location(const char *command)
 		if (stat(file_path, &buffer) == 0)
 		{
 			free(path_copy);
-			return (file_path);
+			return file_path;
 		}
 
 		path_token = strtok(NULL, ":");
 
 	}
+	/* Check if the command itself is a file path that exists */
+	if (stat(command, &buffer) == 0)
+	{
+		free(path_copy);
+		return strdup(command);
+	}
+	
 	/* Free allocated memory before returning NULL */
 	free(file_path);
 	free(path_copy);
 
-	return (NULL);
+	return NULL;
 
 }
 
@@ -233,7 +254,7 @@ int tokenize_input(char *input, char *args[])
 
 	while (token != NULL && i < MAX_ARGS - 1)
 	{
-		args[i++] = strdup(token);
+		args[i++] = token;
 		token = strtok(NULL, " ");
 	}
 
@@ -267,15 +288,12 @@ int envi_(info_t *info)
   */
 int main(int argc, char *argv[])
 {
-	info_t *my_info;
+	info_t *my_info = initialize_info();
 
 	char input[MAX_INPUT_SIZE];
 	char *args[MAX_ARGS];
 	int i, j;
 	(void)argc;
-
-	my_info = initialize_info();
-
 	signal(SIGINT, sigint);
 
 	while(1)
@@ -295,7 +313,10 @@ int main(int argc, char *argv[])
 			}
 
 			input[strcspn(input, "\n")] = '\0'; /*  Remove newline character */
-
+			if (sigint_received)
+			{
+				cleanup_nd_exit(my_info);
+			}
 			if (strcmp(input, "exit") == 0)
 			{
 				exit_(my_info);
@@ -306,8 +327,8 @@ int main(int argc, char *argv[])
 				continue;
 			}	
 
-			i = tokenize_input(input, args);
-			if (i > 0 && args[0] != NULL)
+			tokenize_input(input, args);
+			if (args[0] != NULL)
 			{
 				execute_command(args, argv[0]);
 			}
@@ -317,7 +338,8 @@ int main(int argc, char *argv[])
 			{
 				free(args[j]);
 			}
-		}
+			i =0;
+	}
 	cleanup_info(my_info);
 	return (0);
 }
