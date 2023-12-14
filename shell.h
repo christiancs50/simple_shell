@@ -61,5 +61,7 @@ info_t *initialize_info(void);
 int envi_(info_t *info);
 void exit_(info_t *my_info);
 void cleanup_info(info_t *my_info);
+int setenv_built(char *args[]);
+int unsetenv_builtin(char *args[]);
 
 #endif
