@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 			i = tokenize_input(input, args);
 			if (i > 0 && args[0] != NULL)
 			{
-				if (!execute_builtin(args, argv[0]))
+				if (!execute_builtin(args))
 				execute_command(args, argv[0]);
 			}
 			/* Free allocated memory */
