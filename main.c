@@ -39,8 +39,10 @@ int main(int argc, char *argv[])
 			}
 			i = tokenize_input(input, args);
 			if (i > 0 && args[0] != NULL)
+			{
+				if (!execute_builtin(args, argv[0]))
 				execute_command(args, argv[0]);
-
+			}
 			/* Free allocated memory */
 			for (j = 0; j < i; j++)
 				free(args[j]);
