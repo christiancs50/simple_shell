@@ -69,11 +69,11 @@ int unsetenv_builtin(char *args[])
  * @prog_name: Name of the program.
  * Return: 1 if the command is a builtin, 0 otherwise.
  */
-int execute_builtin(char *args[], char *prog_name)
+int execute_builtin(char *args[])
 {
 	if (strcmp(args[0], "setenv") == 0)
 	{
-		return (setenv_builtin(args));
+		return (setenv_built(args));
 	}
 	else if (strcmp(args[0], "unsetenv") == 0)
 	{
